@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat App</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg-color: #1e1e1e;
+            --text-color: #ffffff;
+            --secondary-text-color: #b0b0b0;
+            --accent-color: #2196F3;
+            --input-bg-color: #2a2a2a;
+            --scrollbar-thumb: #4a4a4a;
+            --scrollbar-track: #2a2a2a;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- Login Screen --- */
+        #login-screen {
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        #login-form {
+            background-color: var(--input-bg-color);
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        #login-form input, #login-form button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+        }
+        #login-form input {
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+        #login-form button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- Character List Screen --- */
+        #character-list-screen .header {
+            display: flex;
+            padding: 10px;
+            background-color: var(--card-bg-color);
+            border-bottom: 1px solid var(--input-bg-color);
+        }
+        #character-list-screen .header input {
+            flex: 1;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-right: 10px;
+        }
+        #character-list-screen .header button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .content-container {
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .content-container::-webkit-scrollbar { width: 8px; }
+        .content-container::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        .content-container::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .character-card {
+            background-color: var(--input-bg-color);
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 10px;
+        }
+        .character-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+        }
+        .character-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .character-card .name {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        /* --- Chat Screen --- */
+        #chat-screen .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--card-bg-color);
+            border-bottom: 1px solid var(--input-bg-color);
+        }
+        #chat-screen .header button {
+            background-color: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 24px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        #chat-screen .header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        #chat-screen .header .char-name {
+            font-size: 18px;
+        }
+
+        #chat-screen .chat-history {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #chat-screen .chat-history::-webkit-scrollbar { width: 8px; }
+        #chat-screen .chat-history::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        #chat-screen .chat-history::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+        
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 12px;
+        }
+        .message.user {
+            background-color: #007bff;
+            align-self: flex-end;
+        }
+        .message.ai {
+            background-color: #3a3a3a;
+            align-self: flex-start;
+        }
+
+        #chat-screen .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid var(--input-bg-color);
+            background-color: var(--card-bg-color);
+        }
+        #chat-screen .input-container input {
+            flex: 1;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 20px;
+            padding: 12px 15px;
+            margin-right: 10px;
+        }
+        #chat-screen .input-container button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 20px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- Popups --- */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .popup-overlay.active {
+            display: flex;
+        }
+        .popup-content {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+        .popup-content h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .popup-content input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .popup-content .popup-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .popup-content button {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        #create-char-popup button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+        }
+        .close-button {
+            background-color: var(--secondary-text-color) !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <div id="login-screen" class="screen active">
+            <div id="login-form">
+                <h2>Войдите в аккаунт</h2>
+                <input type="text" id="username-input" placeholder="Имя пользователя">
+                <button id="login-button">Войти</button>
+            </div>
+        </div>
+
+        <div id="character-list-screen" class="screen">
+            <div class="header">
+                <input type="text" id="search-input" placeholder="Поиск по имени...">
+                <button id="add-char-btn">+</button>
+            </div>
+            <div class="content-container">
+                <h3 class="section-title">Недавно использованные</h3>
+                <div class="character-grid" id="used-characters-grid"></div>
+                <h3 class="section-title">Все персонажи</h3>
+                <div class="character-grid" id="all-characters-grid"></div>
+            </div>
+        </div>
+
+        <div id="chat-screen" class="screen">
+            <div class="header">
+                <button id="back-to-list-btn">&#8592;</button>
+                <img id="chat-char-avatar" src="">
+                <span class="char-name" id="chat-char-name"></span>
+            </div>
+            <div class="chat-history" id="chat-history"></div>
+            <div class="input-container">
+                <input type="text" id="message-input" placeholder="Введите ваше сообщение...">
+                <button id="send-btn">Отправить</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="create-char-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Создать персонажа</h3>
+            <input type="text" id="new-char-name" placeholder="Имя персонажа">
+            <input type="text" id="new-char-desc" placeholder="Описание характера">
+            <input type="text" id="new-char-img" placeholder="URL картинки (опционально)">
+            <div class="popup-buttons">
+                <button class="close-button">Отмена</button>
+                <button id="create-char-btn">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://192.168.0.4:5000';
+        let username = '';
+        let currentCharacterName = '';
+
+        const loginScreen = document.getElementById('login-screen');
+        const characterListScreen = document.getElementById('character-list-screen');
+        const chatScreen = document.getElementById('chat-screen');
+        
+        const loginInput = document.getElementById('username-input');
+        const loginButton = document.getElementById('login-button');
+
+        const searchInput = document.getElementById('search-input');
+        const usedGrid = document.getElementById('used-characters-grid');
+        const allGrid = document.getElementById('all-characters-grid');
+        const addCharBtn = document.getElementById('add-char-btn');
+        
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const backToListBtn = document.getElementById('back-to-list-btn');
+
+        const createCharPopup = document.getElementById('create-char-popup');
+        const newCharNameInput = document.getElementById('new-char-name');
+        const newCharDescInput = document.getElementById('new-char-desc');
+        const newCharImgInput = document.getElementById('new-char-img');
+        const createCharBtn = document.getElementById('create-char-btn');
+
+        // --- Navigation Functions ---
+        function showScreen(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            screen.classList.add('active');
+        }
+
+        // --- Data Fetching ---
+        async function fetchCharacters() {
+            try {
+                const response = await fetch(`${SERVER_URL}/characters`);
+                const characters = await response.json();
+                renderCharacters(characters);
+            } catch (error) {
+                console.error('Error fetching characters:', error);
+                alert('Не удалось загрузить персонажей.');
+            }
+        }
+        
+        async function fetchHistory(characterName) {
+            try {
+                const response = await fetch(`${SERVER_URL}/history`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, character: characterName })
+                });
+                const history = await response.json();
+                renderChatHistory(history);
+            } catch (error) {
+                console.error('Error fetching chat history:', error);
+            }
+        }
+
+        // --- Rendering Functions ---
+        function renderCharacters(characters, filter = '') {
+            usedGrid.innerHTML = '';
+            allGrid.innerHTML = '';
+            
+            const filteredChars = Object.entries(characters).filter(([name, data]) => 
+                name.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            filteredChars.forEach(([name, data]) => {
+                const card = createCharacterCard(name, data.image_url);
+                allGrid.appendChild(card);
+            });
+        }
+
+        function createCharacterCard(name, imageUrl) {
+            const card = document.createElement('div');
+            card.className = 'character-card';
+            card.innerHTML = `
+                <img src="${imageUrl}" alt="${name}">
+                <div class="name">${name}</div>
+            `;
+            card.addEventListener('click', () => selectCharacter(name, imageUrl));
+            return card;
+        }
+        
+        function renderChatHistory(history) {
+            chatHistoryDiv.innerHTML = '';
+            history.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.role}`;
+                messageDiv.textContent = msg.text;
+                chatHistoryDiv.appendChild(messageDiv);
+            });
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        }
+
+        // --- Event Handlers ---
+        loginButton.addEventListener('click', () => {
+            const user = loginInput.value.trim();
+            if (user) {
+                username = user;
+                showScreen(characterListScreen);
+                fetchCharacters();
+            } else {
+                alert('Пожалуйста, введите имя пользователя.');
+            }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            fetchCharacters(); // Re-fetch or filter on the client side
+        });
+
+        addCharBtn.addEventListener('click', () => {
+            createCharPopup.classList.add('active');
+        });
+        
+        createCharPopup.querySelector('.close-button').addEventListener('click', () => {
+            createCharPopup.classList.remove('active');
+        });
+
+        createCharBtn.addEventListener('click', async () => {
+            const name = newCharNameInput.value.trim();
+            const desc = newCharDescInput.value.trim();
+            const img = newCharImgInput.value.trim();
+            
+            if (!name || !desc) {
+                alert('Имя и описание обязательны.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVER_URL}/create_character`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description: desc, image_url: img })
+                });
+                const data = await response.json();
+                alert(data.message || data.error);
+                if (response.ok) {
+                    createCharPopup.classList.remove('active');
+                    newCharNameInput.value = '';
+                    newCharDescInput.value = '';
+                    newCharImgInput.value = '';
+                    fetchCharacters();
+                }
+            } catch (error) {
+                alert('Ошибка создания персонажа.');
+            }
+        });
+
+        function selectCharacter(name, imageUrl) {
+            currentCharacterName = name;
+            document.getElementById('chat-char-name').textContent = name;
+            document.getElementById('chat-char-avatar').src = imageUrl;
+            showScreen(chatScreen);
+            fetchHistory(name);
+        }
+
+        backToListBtn.addEventListener('click', () => {
+            showScreen(characterListScreen);
+        });
+
+        sendBtn.addEventListener('click', async () => {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message to history immediately
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user';
+            userMessageDiv.textContent = message;
+            chatHistoryDiv.appendChild(userMessageDiv);
+            messageInput.value = '';
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+            try {
+                const response = await fetch(`${SERVER_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, character: currentCharacterName, message })
+                });
+                const data = await response.json();
+                
+                // Add AI message to history
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.className = 'message ai';
+                aiMessageDiv.textContent = data.response;
+                chatHistoryDiv.appendChild(aiMessageDiv);
+                chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Не удалось отправить сообщение.');
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendBtn.click();
+            }
+        });
+
+    </script>
+</body>
+</html>
