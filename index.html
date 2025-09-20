@@ -306,7 +306,7 @@
                 <button id="add-char-btn">+</button>
             </div>
             <div class="content-container">
-                <h3 class="section-title">Недавно использованные</h3>
+                <h3 class="section-title">Мои чаты</h3>
                 <div class="character-grid" id="used-characters-grid"></div>
                 <h3 class="section-title">Все персонажи</h3>
                 <div class="character-grid" id="all-characters-grid"></div>
@@ -342,9 +342,10 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://127.0.0.1:5000'; // ← Вот эта строка
+        const SERVER_URL = 'http://192.168.0.4:5000';
         let username = '';
         let currentCharacterName = '';
+        let allCharactersData = {};
 
         const loginScreen = document.getElementById('login-screen');
         const characterListScreen = document.getElementById('character-list-screen');
@@ -379,14 +380,51 @@
         async function fetchCharacters() {
             try {
                 const response = await fetch(`${SERVER_URL}/characters`);
-                const characters = await response.json();
-                renderCharacters(characters);
+                allCharactersData = await response.json();
+                renderCharacters();
+                fetchUserChats();
             } catch (error) {
                 console.error('Error fetching characters:', error);
                 alert('Не удалось загрузить персонажей.');
             }
         }
+
+        async function fetchUserChats() {
+            try {
+                // Сервер не имеет отдельного API для списка чатов.
+                // Вместо этого, мы будем читать историю чатов по известным персонажам.
+                // Этот блок - заглушка, в реальном приложении это делал бы сервер.
+                const usedCharacters = await getUsedCharactersFromHistoryDir();
+                renderUsedCharacters(usedCharacters);
+            } catch (error) {
+                console.error('Error fetching user chats:', error);
+            }
+        }
         
+        // Эта функция имитирует получение списка чатов с сервера
+        async function getUsedCharactersFromHistoryDir() {
+            try {
+                const response = await fetch(`${SERVER_URL}/characters`); // Временно используем этот API
+                const allChars = await response.json();
+                const used = [];
+                // Имитация проверки файлов истории для пользователя
+                for (const name in allChars) {
+                    const historyResponse = await fetch(`${SERVER_URL}/history`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, character: name })
+                    });
+                    const history = await historyResponse.json();
+                    if (history.length > 0) {
+                        used.push({ name: name, imageUrl: allChars[name].image_url });
+                    }
+                }
+                return used;
+            } catch (error) {
+                return [];
+            }
+        }
+
         async function fetchHistory(characterName) {
             try {
                 const response = await fetch(`${SERVER_URL}/history`, {
@@ -402,17 +440,24 @@
         }
 
         // --- Rendering Functions ---
-        function renderCharacters(characters, filter = '') {
-            usedGrid.innerHTML = '';
+        function renderCharacters(filter = '') {
             allGrid.innerHTML = '';
             
-            const filteredChars = Object.entries(characters).filter(([name, data]) => 
+            const filteredChars = Object.entries(allCharactersData).filter(([name, data]) => 
                 name.toLowerCase().includes(filter.toLowerCase())
             );
 
             filteredChars.forEach(([name, data]) => {
                 const card = createCharacterCard(name, data.image_url);
                 allGrid.appendChild(card);
+            });
+        }
+        
+        function renderUsedCharacters(characters) {
+            usedGrid.innerHTML = '';
+            characters.forEach(char => {
+                const card = createCharacterCard(char.name, char.imageUrl);
+                usedGrid.appendChild(card);
             });
         }
 
@@ -451,7 +496,7 @@
         });
 
         searchInput.addEventListener('input', (e) => {
-            fetchCharacters(); // Re-fetch or filter on the client side
+            renderCharacters(e.target.value);
         });
 
         addCharBtn.addEventListener('click', () => {
@@ -546,4 +591,3 @@
     </script>
 </body>
 </html>
-
